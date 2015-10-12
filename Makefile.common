@@ -1,0 +1,105 @@
+# name of executable
+
+ELF=$(notdir $(CURDIR)).elf                    
+
+# Tool path
+
+
+TOOLROOT=/usr/bin
+
+# Library path
+
+LIBROOT=$(HOME)/projects/STM32-noeclipse/STM32F10x_StdPeriph_Lib_V3.5.0
+
+# Tools
+
+CC=$(TOOLROOT)/arm-none-eabi-gcc
+LD=$(TOOLROOT)/arm-none-eabi-gcc
+AR=$(TOOLROOT)/arm-none-eabi-ar
+AS=$(TOOLROOT)/arm-none-eabi-as
+
+# Code Paths
+
+DEVICE=$(LIBROOT)/Libraries/CMSIS/CM3/DeviceSupport/ST/STM32F10x
+CORE=$(LIBROOT)/Libraries/CMSIS/CM3/CoreSupport
+PERIPH=$(LIBROOT)/Libraries/STM32F10x_StdPeriph_Driver
+
+DIAG=diag
+NEWLIB=newlib
+SEMIHOST=arm
+
+# Search path for standard files
+
+vpath %.c $(TEMPLATEROOT)
+
+# Search path for perpheral library
+
+vpath %.c $(CORE)
+vpath %.c $(PERIPH)/src
+vpath %.c $(DEVICE)
+
+
+# Search path for Library
+
+#vpath %.c $(TEMPLATEROOT)/Library/ff9/src
+#vpath %.c $(TEMPLATEROOT)/Library/ff9/src/option
+vpath %.c $(TEMPLATEROOT)/Library
+
+#vpath %.c $(TEMPLATEROOT)/$(DIAG)
+#vpath %.c $(TEMPLATEROOT)/$(NEWLIB)
+
+#  Processor specific
+
+#PTYPE = STM32F10X_MD_VL 
+PTYPE = STM32F10X_LD_VL 
+LDSCRIPT = $(TEMPLATEROOT)/stm32f100.ld
+#LDSCRIPT = -T$(TEMPLATEROOT)/ldscripts/libs.ld -T$(TEMPLATEROOT)/ldscripts/mem.ld -T$(TEMPLATEROOT)/ldscripts/sections.ld
+STARTUP= startup_stm32f10x.o system_stm32f10x.o 
+
+# Compilation Flags
+
+FULLASSERT = USE_FULL_ASSERT 
+#TRACE = OS_USE_TRACE_ITM
+#OS_USE_TRACE_SEMIHOSTING_DEBUG
+#OS_USE_TRACE_SEMIHOSTING_STDOUT 
+#OS_USE_TRACE_ITM
+
+LDFLAGS+= -T$(LDSCRIPT) -mthumb -mcpu=cortex-m3 
+#LDFLAGS+= $(LDSCRIPT) -mthumb -mcpu=cortex-m3 
+CFLAGS+= -mcpu=cortex-m3 -mthumb -std=c99
+CFLAGS+= -I$(TEMPLATEROOT) -I$(DEVICE) -I$(CORE) -I$(PERIPH)/inc -I.
+CFLAGS+= -D$(PTYPE) -DUSE_STDPERIPH_DRIVER -D$(FULLASSERT) 
+#-DDEBUG -DTRACE -D$(TRACE) -I$(SEMIHOST) -I$(DIAG)
+#  -DHSE_VALUE=8000000 
+
+CFLAGS+=  -I$(TEMPLATEROOT)/Library 
+# -I$(TEMPLATEROOT)/Library/ff9/src
+
+# Build executable 
+
+$(ELF) : $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
+
+# compile and generate dependency info
+
+%.o: %.c
+	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -MM $(CFLAGS) $< > $*.d
+
+%.o: %.s
+	$(CC) -c $(CFLAGS) $< -o $@
+
+clean:
+	rm -f $(OBJS) $(OBJS:.o=.d) $(ELF) startup_stm32f* $(CLEANOTHER)
+
+debug: $(ELF)
+	arm-none-eabi-gdb $(ELF)
+
+
+# pull in dependencies
+
+-include $(OBJS:.o=.d)
+
+
+
+
